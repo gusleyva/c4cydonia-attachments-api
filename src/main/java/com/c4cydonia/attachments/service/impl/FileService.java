@@ -1,0 +1,172 @@
+package com.c4cydonia.attachments.service.impl;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.tika.Tika;
+import org.apache.tika.io.TikaInputStream;
+import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.c4cydonia.attachments.exception.FileException;
+import com.c4cydonia.attachments.model.FileMetadata;
+import com.c4cydonia.attachments.model.FileMetadataRequestDto;
+import com.c4cydonia.attachments.model.FileMetadataResponseDto;
+import com.c4cydonia.attachments.model.OwnershipDetails;
+import com.c4cydonia.attachments.repository.FileMetadataRepository;
+import com.c4cydonia.attachments.service.IFileService;
+import com.c4cydonia.attachments.service.IStorageService;
+
+import lombok.AllArgsConstructor;
+
+@Service
+@AllArgsConstructor
+public class FileService implements IFileService {
+
+    private FileMetadataRepository fileRepository;
+    private IStorageService storageService;
+    private ModelMapper modelMapper;
+
+    private final Map<String, Set<String>> allowedFileTypes = Map.of(
+            "image", Set.of("bmp", "dib", "gif", "jpg", "jpeg"), //, "png"
+            "text", Set.of("txt", "csv")
+    );
+
+    @Override
+    public FileMetadataResponseDto uploadFile(MultipartFile file, String createdBy, FileMetadataRequestDto fileMetadataDto) {
+        validateFile(file, createdBy);
+
+        var ownership = OwnershipDetails.builder()
+                .addedBy(createdBy)
+                .owners(fileMetadataDto.getOwnershipDetails().getOwners())
+                .receivers(fileMetadataDto.getOwnershipDetails().getReceivers())
+                .build();
+
+        // TODO - Handle save conflicts
+        String uuid = UUID.randomUUID().toString();
+
+        String fileUrl = storageService.constructFileUrl(uuid, file.getOriginalFilename());
+
+        FileMetadata fileMetadata = FileMetadata.builder()
+                .fileId(uuid)
+                .fileName(file.getOriginalFilename())
+                .fileSize(file.getSize())
+                .contentType(file.getContentType())
+                .createdBy(createdBy)
+                .text(fileMetadataDto.getText())
+                .title(fileMetadataDto.getTitle())
+                .fileUrl(fileUrl)
+                .ownershipDetails(ownership)
+                .build();
+
+        // TODO - Simulate call to AWS S3 to save the file
+        // fileUrl
+
+        fileRepository.save(fileMetadata);
+
+        var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
+
+        return fileMetadataResponse;
+    }
+
+    private void validateFile(MultipartFile file, String createdBy) {
+        if (file == null || file.isEmpty()) {
+            throw new FileException(HttpStatus.BAD_REQUEST, "No file provided");
+        }
+
+        if (createdBy == null || createdBy.trim().isEmpty()) {
+            throw new FileException(HttpStatus.BAD_REQUEST, "No user provided");
+        }
+
+        if (!isValidFileType(file)) {
+            throw new FileException(HttpStatus.NOT_ACCEPTABLE, "Invalid file type");
+        }
+    }
+
+    public boolean isValidFileType(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        String extension = FilenameUtils.getExtension(filename);
+        String mediaType = getMediaType(file);
+
+        return isTypeAllowed(mediaType, extension);
+    }
+
+    public String getMediaType(MultipartFile multipartFile) {
+        String fileName = multipartFile.getOriginalFilename();
+        try {
+            return new Tika().detect(TikaInputStream.get(multipartFile.getInputStream()), fileName);
+        } catch (IOException e) {
+            throw new FileException(HttpStatus.NOT_ACCEPTABLE, "Issue with file type detection");
+        }
+    }
+
+    private boolean isTypeAllowed(String mediaType, String fileExtension) {
+        String category = mediaType.split("/")[0];
+
+        if (allowedFileTypes.containsKey(category)) {
+            return allowedFileTypes.get(category).contains(fileExtension);
+        }
+        return false;
+    }
+
+    @Override
+    public FileMetadataResponseDto retrieveFileMetadata(String fileId, String requesterEmail) {
+        FileMetadata fileMetadata = retrieveFile(fileId);
+        validateOwnership(fileMetadata, requesterEmail);
+        var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
+        return fileMetadataResponse;
+    }
+
+    // Avoid duplicate code
+    private FileMetadata retrieveFile(String fileId) {
+        return fileRepository.findById(fileId)
+                .orElseThrow(() -> new FileException(HttpStatus.NOT_FOUND, "File not found"));
+    }
+
+    // TODO - Search by bulk
+    // TODO - This will help with a possible test where some files were found and others not
+
+    private void validateOwnership(FileMetadata fileMetadata, String requesterEmail) {
+        if (!fileMetadata.getOwnershipDetails().getOwners().contains(requesterEmail)
+                && !fileMetadata.getOwnershipDetails().getReceivers().contains(requesterEmail)) {
+            throw new FileException(HttpStatus.FORBIDDEN, "Unauthorized access");
+        }
+    }
+
+    @Override
+    public FileMetadataResponseDto updateFileMetadata(String fileId, FileMetadata updates, String requesterEmail) {
+        FileMetadata fileMetadata = retrieveFile(fileId);
+
+        validateOwnership(fileMetadata, requesterEmail);
+
+        fileMetadata.setText(updates.getText());
+        fileMetadata.setTitle(updates.getTitle());
+        fileMetadata.setOwnershipDetails(updates.getOwnershipDetails());
+
+        // TODO - Simulate call to AWS S3 to save the file
+        fileRepository.save(fileMetadata);
+        var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
+
+        return fileMetadataResponse;
+    }
+
+    @Override
+    public void deleteFile(String fileId, String requesterEmail) {
+        FileMetadata fileMetadata = retrieveFile(fileId);
+        validateOwnership(fileMetadata, requesterEmail);
+
+        // Simulate call to AWS S3 to DELETE the file
+        var isDeleted = storageService.deleteFile(fileMetadata.getFileId());
+        if (!isDeleted) {
+            throw new FileException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete file");
+        }
+        fileRepository.deleteById(fileId);
+    }
+
+    // TODO - Add a method to download the file? UI can handle that part with the URL
+}

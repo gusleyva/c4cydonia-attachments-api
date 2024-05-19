@@ -1,0 +1,10 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/attachmentsdb
+
+aws:
+  s3:
+    bucket: your-bucket-name
+    access-key: your-access-key
+    secret-key: your-secret-key

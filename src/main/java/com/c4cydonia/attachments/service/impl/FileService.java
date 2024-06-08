@@ -64,9 +64,6 @@ public class FileService implements IFileService {
                 .ownershipDetails(ownership)
                 .build();
 
-        // TODO - Simulate call to AWS S3 to save the file
-        // fileUrl
-
         fileRepository.save(fileMetadata);
 
         var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
@@ -89,8 +86,8 @@ public class FileService implements IFileService {
     }
 
     public boolean isValidFileType(MultipartFile file) {
-        String filename = file.getOriginalFilename();
-        String extension = FilenameUtils.getExtension(filename);
+        String fileName = file.getOriginalFilename();
+        String extension = FilenameUtils.getExtension(fileName);
         String mediaType = getMediaType(file);
 
         return isTypeAllowed(mediaType, extension);

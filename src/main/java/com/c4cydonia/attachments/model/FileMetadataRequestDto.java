@@ -14,7 +14,7 @@ import javax.validation.constraints.NotBlank;
 @Builder
 public class FileMetadataRequestDto {
     @NotBlank(message = "Filename is mandatory.")
-    private String filename;
+    private String fileName;
     private String text;
     private String title;
 

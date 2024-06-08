@@ -1,7 +1,19 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: always
+
 spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/attachmentsdb
+      host: localhost
+      port: 27017
+      database: attachmentsdb
 
 aws:
   s3:

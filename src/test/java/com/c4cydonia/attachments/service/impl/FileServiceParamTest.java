@@ -129,10 +129,10 @@ class FileServiceParamTest {
                 .build();
     }
 
-    private static FileMetadataRequestDto buildFileMetadataRequestDto(String filename, String text, String title,
+    private static FileMetadataRequestDto buildFileMetadataRequestDto(String fileName, String text, String title,
                                                                       OwnershipRequestDto ownership) {
         return FileMetadataRequestDto.builder()
-                .filename(filename)
+                .fileName(fileName)
                 .text(text)
                 .title(title)
                 .ownershipDetails(ownership)
@@ -152,8 +152,8 @@ class FileServiceParamTest {
         // Mocking the dynamic URL construction
         when(storageService.constructFileUrl(anyString(), anyString())).thenAnswer(invocation -> {
             String uuid = invocation.getArgument(0, String.class);
-            String filename = invocation.getArgument(1, String.class);
-            return "http://example.com/" + uuid + "/" + filename;
+            String fileName = invocation.getArgument(1, String.class);
+            return "http://example.com/" + uuid + "/" + fileName;
         });
 
         // Act

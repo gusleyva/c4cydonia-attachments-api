@@ -101,9 +101,9 @@ class FileServiceTest {
                 .build();
     }
 
-    private FileMetadataRequestDto buildFileMetadataRequestDto(String filename, String text, String title, OwnershipRequestDto ownership) {
+    private FileMetadataRequestDto buildFileMetadataRequestDto(String fileName, String text, String title, OwnershipRequestDto ownership) {
         return FileMetadataRequestDto.builder()
-                .filename(filename)
+                .fileName(fileName)
                 .text(text)
                 .title(title)
                 .ownershipDetails(ownership)

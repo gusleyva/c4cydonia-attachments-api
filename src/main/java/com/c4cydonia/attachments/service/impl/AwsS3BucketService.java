@@ -23,13 +23,13 @@ public class AwsS3BucketService implements IStorageService {
     private String bucketName = "your-bucket-name";
 
     @Override
-    public String constructFileUrl(String uuid, String originalFilename) {
+    public String constructFileUrl(String uuid, String originalFileName) {
         // Use a date to partition the file path in the bucket, for example:
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
         String datePath = LocalDate.now().format(formatter);
 
         // Construct the full S3 key with the date path, UUID, and the original filename
-        return datePath + "/" + uuid + "-" + originalFilename;
+        return datePath + "/" + uuid + "-" + originalFileName;
     }
 
     @Override

@@ -252,7 +252,7 @@ class FileServiceParamTest {
                 .ownershipDetails(ownership)
                 .build();
 
-        FileMetadata updates = FileMetadata.builder()
+        FileMetadataRequestDto updates = FileMetadataRequestDto.builder()
                 .text(updatedText)
                 .title(updatedTitle)
                 .build();

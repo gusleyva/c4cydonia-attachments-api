@@ -1,5 +1,6 @@
 package com.c4cydonia.attachments.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ import javax.validation.constraints.NotBlank;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FileMetadataRequestDto {
     @NotBlank(message = "Filename is mandatory.")
     private String fileName;

@@ -1,6 +1,7 @@
 package com.c4cydonia.attachments.service.impl;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -52,6 +53,7 @@ public class FileService implements IFileService {
 
         String fileUrl = storageService.constructFileUrl(uuid, file.getOriginalFilename());
 
+        var instantNow = Instant.now();
         FileMetadata fileMetadata = FileMetadata.builder()
                 .fileId(uuid)
                 .fileName(file.getOriginalFilename())
@@ -62,6 +64,8 @@ public class FileService implements IFileService {
                 .title(fileMetadataDto.getTitle())
                 .fileUrl(fileUrl)
                 .ownershipDetails(ownership)
+                .createdDate(instantNow)
+                .modifiedDate(instantNow)
                 .build();
 
         fileRepository.save(fileMetadata);
@@ -121,7 +125,7 @@ public class FileService implements IFileService {
 
     // Avoid duplicate code
     private FileMetadata retrieveFile(String fileId) {
-        return fileRepository.findById(fileId)
+        return fileRepository.findByFileId(fileId)
                 .orElseThrow(() -> new FileException(HttpStatus.NOT_FOUND, "File not found"));
     }
 
@@ -129,21 +133,28 @@ public class FileService implements IFileService {
     // TODO - This will help with a possible test where some files were found and others not
 
     private void validateOwnership(FileMetadata fileMetadata, String requesterEmail) {
-        if (!fileMetadata.getOwnershipDetails().getOwners().contains(requesterEmail)
-                && !fileMetadata.getOwnershipDetails().getReceivers().contains(requesterEmail)) {
+        var ownershipDetails = fileMetadata.getOwnershipDetails();
+        var isCreator = ownershipDetails.getAddedBy().equalsIgnoreCase(requesterEmail);
+        var isOwner = ownershipDetails.getOwners().contains(requesterEmail);
+        var isReceiver = ownershipDetails.getReceivers().contains(requesterEmail);
+        if (!isCreator && !isOwner && !isReceiver) {
             throw new FileException(HttpStatus.FORBIDDEN, "Unauthorized access");
         }
     }
 
     @Override
-    public FileMetadataResponseDto updateFileMetadata(String fileId, FileMetadata updates, String requesterEmail) {
+    public FileMetadataResponseDto updateFileMetadata(String fileId, FileMetadataRequestDto updates, String requesterEmail) {
         FileMetadata fileMetadata = retrieveFile(fileId);
 
         validateOwnership(fileMetadata, requesterEmail);
 
+        var ownerShipDetailsDto = updates.getOwnershipDetails();
+        var ownershipDetails = modelMapper.map(ownerShipDetailsDto, OwnershipDetails.class);
+
         fileMetadata.setText(updates.getText());
         fileMetadata.setTitle(updates.getTitle());
-        fileMetadata.setOwnershipDetails(updates.getOwnershipDetails());
+        fileMetadata.setOwnershipDetails(ownershipDetails);
+        fileMetadata.setModifiedDate(Instant.now());
 
         // TODO - Simulate call to AWS S3 to save the file
         fileRepository.save(fileMetadata);
@@ -162,7 +173,7 @@ public class FileService implements IFileService {
         if (!isDeleted) {
             throw new FileException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete file");
         }
-        fileRepository.deleteById(fileId);
+        fileRepository.deleteById(fileMetadata.getId());
     }
 
     // TODO - Add a method to download the file? UI can handle that part with the URL

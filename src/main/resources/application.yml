@@ -7,6 +7,11 @@ management:
     health:
       show-details: always
 
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+
 spring:
   data:
     mongodb:

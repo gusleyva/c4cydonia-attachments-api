@@ -149,7 +149,7 @@ class FileServiceTest {
 
         fileMetadata.setOwnershipDetails(ownership);
 
-        when(fileRepository.findById(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
 
         FileMetadataResponseDto result = fileService.retrieveFileMetadata(fileId, USER_CREATOR);
 
@@ -177,12 +177,13 @@ class FileServiceTest {
                 .ownershipDetails(ownership)
                 .build();
 
-        FileMetadata updates = FileMetadata.builder()
+        FileMetadataRequestDto updates = FileMetadataRequestDto.builder()
                 .text(updatedText)
                 .title(updatedTitle)
+                .ownershipDetails(OwnershipRequestDto.builder().build())
                 .build();
 
-        when(fileRepository.findById(fileId)).thenReturn(Optional.of(existingMetadata));
+        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(existingMetadata));
         when(fileRepository.save(any(FileMetadata.class))).thenReturn(existingMetadata);
 
         FileMetadataResponseDto result = fileService.updateFileMetadata(fileId, updates, USER_OWNER);
@@ -202,7 +203,7 @@ class FileServiceTest {
                 .ownershipDetails(ownership)
                 .build();
 
-        when(fileRepository.findById(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
 
         Exception exception = assertThrows(FileException.class, () -> {
             fileService.deleteFile(fileId, "unauthorized@example.com");
@@ -223,7 +224,7 @@ class FileServiceTest {
                 .build();
 
         when(storageService.deleteFile(anyString())).thenReturn(true);
-        when(fileRepository.findById(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
 
         fileService.deleteFile(fileId, USER_OWNER);
 

@@ -10,6 +10,8 @@ import com.c4cydonia.attachments.model.FileMetadata;
 
 @Repository
 public interface FileMetadataRepository extends MongoRepository<FileMetadata, String> {
+    Optional<FileMetadata> findByFileId(String fileId);
+
     List<FileMetadata> findByCreatedBy(String createdBy);
 
     Optional<FileMetadata> findByFileName(String fileName);

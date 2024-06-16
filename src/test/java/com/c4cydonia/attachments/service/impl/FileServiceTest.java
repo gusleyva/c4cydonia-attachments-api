@@ -78,8 +78,10 @@ class FileServiceTest {
         var requestDto = buildFileMetadataRequestDto(FILE_TEST, TEXT, TITLE, ownership);
         FileMetadata fileMetadata = new FileMetadata();
 
-        lenient().when(storageService.constructFileUrl(anyString(), anyString())).thenReturn("http://example.com/test.jpg");
-        lenient().when(fileRepository.save(any(FileMetadata.class))).thenReturn(fileMetadata);
+        lenient().when(storageService.constructFileUrl(anyString(), anyString()))
+                .thenReturn("http://example.com/test.jpg");
+        lenient().when(fileRepository.save(any(FileMetadata.class)))
+                .thenReturn(fileMetadata);
 
         FileMetadataResponseDto result = fileService.uploadFile(mockFile, "user@example.com", requestDto);
 
@@ -147,13 +149,14 @@ class FileServiceTest {
                 .ownershipDetails(ownership)
                 .build();
 
-        fileMetadata.setOwnershipDetails(ownership);
-
-        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId))
+                .thenReturn(Optional.of(fileMetadata));
 
         FileMetadataResponseDto result = fileService.retrieveFileMetadata(fileId, USER_CREATOR);
 
         assertNotNull(result);
+        // Validar createdBy o validar ownershipDetails
+        // Validar fileName, fileURL
     }
 
     private OwnershipDetails buildOwnership(Set<String> owners, Set<String> receivers, String addedBy) {
@@ -192,6 +195,8 @@ class FileServiceTest {
         verify(fileRepository).save(existingMetadata);
         assertEquals(updatedText, existingMetadata.getText());
         assertEquals(updatedTitle, existingMetadata.getTitle());
+        // assertEquals(validate owners
+        // assertEquals(validate receivers
     }
 
     @Test
@@ -200,10 +205,12 @@ class FileServiceTest {
         var ownership = buildOwnership(Set.of(USER_CREATOR, USER_OWNER), Set.of(), USER_CREATOR);
 
         var fileMetadata = FileMetadata.builder()
+                .createdBy(USER_CREATOR)
                 .ownershipDetails(ownership)
                 .build();
 
-        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId))
+                .thenReturn(Optional.of(fileMetadata));
 
         Exception exception = assertThrows(FileException.class, () -> {
             fileService.deleteFile(fileId, "unauthorized@example.com");
@@ -219,15 +226,20 @@ class FileServiceTest {
         var ownership = buildOwnership(Set.of(USER_CREATOR, USER_OWNER), Set.of(), "creator@example.com");
 
         var fileMetadata = FileMetadata.builder()
+                .id("123")
                 .fileId(fileId)
+                .createdBy(USER_CREATOR)
                 .ownershipDetails(ownership)
                 .build();
 
         when(storageService.deleteFile(anyString())).thenReturn(true);
-        when(fileRepository.findByFileId(fileId)).thenReturn(Optional.of(fileMetadata));
+        when(fileRepository.findByFileId(fileId))
+                .thenReturn(Optional.of(fileMetadata));
 
         fileService.deleteFile(fileId, USER_OWNER);
 
-        verify(fileRepository).deleteById(fileId);
+        verify(fileRepository).deleteById(anyString());
     }
+
+    // TODO - Test - throw new FileException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete file");
 }

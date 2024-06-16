@@ -3,6 +3,7 @@ package com.c4cydonia.attachments.service.impl;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -48,9 +49,11 @@ public class FileService implements IFileService {
                 .receivers(fileMetadataDto.getOwnershipDetails().getReceivers())
                 .build();
 
-        // TODO - Handle save conflicts
+        // OPTIONAL - Handle save conflicts
         String uuid = UUID.randomUUID().toString();
 
+        // TODO - file Name logic, let's set a default
+        // TODO - Where else should we update the fileName value?
         String fileUrl = storageService.constructFileUrl(uuid, file.getOriginalFilename());
 
         var instantNow = Instant.now();
@@ -68,9 +71,9 @@ public class FileService implements IFileService {
                 .modifiedDate(instantNow)
                 .build();
 
-        fileRepository.save(fileMetadata);
+        var fileMetadataResponseDb = fileRepository.save(fileMetadata);
 
-        var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
+        var fileMetadataResponse = modelMapper.map(fileMetadataResponseDb, FileMetadataResponseDto.class);
 
         return fileMetadataResponse;
     }
@@ -129,15 +132,25 @@ public class FileService implements IFileService {
                 .orElseThrow(() -> new FileException(HttpStatus.NOT_FOUND, "File not found"));
     }
 
-    // TODO - Search by bulk
-    // TODO - This will help with a possible test where some files were found and others not
+    // OPTIONAL - Search by bulk
+    // This could help with a possible test where some files were found and others not
 
     private void validateOwnership(FileMetadata fileMetadata, String requesterEmail) {
         var ownershipDetails = fileMetadata.getOwnershipDetails();
-        var isCreator = ownershipDetails.getAddedBy().equalsIgnoreCase(requesterEmail);
-        var isOwner = ownershipDetails.getOwners().contains(requesterEmail);
-        var isReceiver = ownershipDetails.getReceivers().contains(requesterEmail);
-        if (!isCreator && !isOwner && !isReceiver) {
+
+        if (Objects.isNull(ownershipDetails)
+                && !fileMetadata.getCreatedBy().equalsIgnoreCase(requesterEmail) ) {
+            throw new FileException(HttpStatus.FORBIDDEN, "Unauthorized access");
+        }
+
+        var isCreator = fileMetadata.getCreatedBy().equalsIgnoreCase(requesterEmail);
+        var isAddedBy = !Objects.isNull(ownershipDetails.getAddedBy())
+                && ownershipDetails.getAddedBy().equalsIgnoreCase(requesterEmail);
+        var isOwner = !Objects.isNull(ownershipDetails.getOwners())
+                && ownershipDetails.getOwners().contains(requesterEmail);
+        var isReceiver = !Objects.isNull(ownershipDetails.getReceivers())
+                && ownershipDetails.getReceivers().contains(requesterEmail);
+        if (!isCreator && !isAddedBy && !isOwner && !isReceiver) {
             throw new FileException(HttpStatus.FORBIDDEN, "Unauthorized access");
         }
     }
@@ -148,6 +161,7 @@ public class FileService implements IFileService {
 
         validateOwnership(fileMetadata, requesterEmail);
 
+        // TODO - ownerShipDetailsDto is wrong, fix the JUnit to see the error and then fix the code
         var ownerShipDetailsDto = updates.getOwnershipDetails();
         var ownershipDetails = modelMapper.map(ownerShipDetailsDto, OwnershipDetails.class);
 
@@ -156,7 +170,6 @@ public class FileService implements IFileService {
         fileMetadata.setOwnershipDetails(ownershipDetails);
         fileMetadata.setModifiedDate(Instant.now());
 
-        // TODO - Simulate call to AWS S3 to save the file
         fileRepository.save(fileMetadata);
         var fileMetadataResponse = modelMapper.map(fileMetadata, FileMetadataResponseDto.class);
 
@@ -176,5 +189,7 @@ public class FileService implements IFileService {
         fileRepository.deleteById(fileMetadata.getId());
     }
 
-    // TODO - Add a method to download the file? UI can handle that part with the URL
+    // OPTIONAL - Add a method to download the file? UI can handle that part with the URL
 }
+
+

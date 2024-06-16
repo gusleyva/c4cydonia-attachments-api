@@ -24,7 +24,7 @@ public class FileController {
     private IFileService fileService;
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
+    @PostMapping(consumes = {"multipart/form-data"})
     public FileMetadataResponseDto uploadFile(
             @RequestPart("file") MultipartFile file,
             @RequestPart("metadata") @Valid FileMetadataRequestDto metadataDto,
@@ -37,8 +37,7 @@ public class FileController {
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{fileId}")
-    public FileMetadataResponseDto retrieveFileMetadata(@PathVariable String fileId,
-                                                                        HttpServletRequest request) {
+    public FileMetadataResponseDto retrieveFileMetadata(@PathVariable String fileId, HttpServletRequest request) {
         String requesterEmail = (String) request.getAttribute("email"); // Extracts the user's email from the request
         FileMetadataResponseDto fileMetadataResponse = fileService.retrieveFileMetadata(fileId, requesterEmail);
         return fileMetadataResponse;

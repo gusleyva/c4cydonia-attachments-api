@@ -207,8 +207,6 @@ class FileServiceParamTest {
                     return "http://example.com/" + uuid + "/" + fileName; // FILE_TEST
         });
 
-
-        // Mocking the fileRepository save method
         Instant now = Instant.now();
         var fileUrl = "http://example.com/123456/dog.jpg"; //test.jpg
         var ownershipDetails = new OwnershipDetails(Set.of(USER_1), Collections.emptySet(), USER_1);
@@ -227,6 +225,7 @@ class FileServiceParamTest {
                 .modifiedDate(now)
                 .build();
 
+        // Mocking the fileRepository save method
         when(fileRepository.save(any(FileMetadata.class))).thenReturn(savedFileMetadata);
 
         // Mocking the modelMapper
@@ -347,7 +346,7 @@ class FileServiceParamTest {
         assertEquals("Failed to delete file", exception.getMessage());
 
         // Verify that the repository delete method was not called due to the exception
-        verify(fileRepository, never()).deleteById(fileId);
+        verify(fileRepository, never()).deleteById(anyString());
     }
 
     // doAnswer example, we manipulate the response in execution time
